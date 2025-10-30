@@ -31,13 +31,11 @@ exports.getRevenue = async (req, res) => {
     const revenue = result[0]?.revenue || 0;
     const count = result[0]?.count || 0;
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Get revenue successfully",
-        data: { revenue, count },
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Get revenue successfully",
+      data: { revenue, count },
+    });
   } catch (error) {
     return res
       .status(500)
@@ -64,13 +62,11 @@ exports.getPaymentRate = async (req, res) => {
     });
 
     const rate = total > 0 ? breakdown.paid / total : 0;
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Get payment rate successfully",
-        data: { total, rate, breakdown },
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Get payment rate successfully",
+      data: { total, rate, breakdown },
+    });
   } catch (error) {
     return res
       .status(500)
@@ -112,13 +108,11 @@ exports.getAppointmentRate = async (req, res) => {
       total += s.count;
     });
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Get appointment rate successfully",
-        data: { total, breakdown },
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Get appointment rate successfully",
+      data: { total, breakdown },
+    });
   } catch (error) {
     return res
       .status(500)
