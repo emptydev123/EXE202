@@ -29,6 +29,9 @@ import ServiceCenterManagement from "./pages/dashboard/admin/ServiceCenterManage
 import AdminOverview from "./pages/dashboard/admin/AdminOverview";
 import WorkingHoursManagement from "./pages/dashboard/admin/WorkingHoursManagement";
 import VehicleModelManagement from "./pages/dashboard/admin/VehicleModelManagement";
+import FinanceDashboard from "./pages/dashboard/admin/FinanceDashboard";
+import PartsManagement from "./pages/dashboard/admin/PartsManagement";
+import ReportsDashboard from "./pages/dashboard/admin/ReportsDashboard";
 import { TechnicianDashboard } from "./pages/dashboard/tech/TechnicianDashboard";
 import { TechnicianOverview } from "./pages/dashboard/tech/TechnicianOverview";
 import { TaskDetail } from "./pages/dashboard/tech/TaskDetail";
@@ -68,8 +71,12 @@ const AppRoutes = () => {
               onLogout={handleLogout}
             />
           </ProtectedRoute>
-        }>
+        }
+      >
         <Route index element={<AdminOverview />} />
+        <Route path="reports" element={<ReportsDashboard />} />
+        <Route path="finance" element={<FinanceDashboard />} />
+        <Route path="parts" element={<PartsManagement />} />
         <Route path="services" element={<ServiceManagement />} />
         <Route path="service-centers" element={<ServiceCenterManagement />} />
         <Route path="vehicle-models" element={<VehicleModelManagement />} />
@@ -87,7 +94,8 @@ const AppRoutes = () => {
               onLogout={handleLogout}
             />
           </ProtectedRoute>
-        }>
+        }
+      >
         <Route index element={<StaffOverview />} />
         <Route path="appointments" element={<AppointmentManagement />} />
         <Route path="appointments/:id" element={<AppointmentDetail />} />
@@ -178,7 +186,8 @@ const AppRoutes = () => {
               onLogout={handleLogout}
             />
           </ProtectedRoute>
-        }>
+        }
+      >
         <Route index element={<TechnicianOverview />} />
         <Route path="task/:appointmentId" element={<TaskDetail />} />
       </Route>

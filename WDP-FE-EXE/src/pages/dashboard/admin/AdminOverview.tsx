@@ -1,236 +1,356 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Users,
-  Car,
+  Loader2,
   Calendar,
-  Clock,
   DollarSign,
-  Activity,
-  FileText,
+  PieChart as PieIcon,
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  fetchDashboardOverview,
+  formatCurrencyVND,
+  formatPercent,
+} from "@/lib/dashboardApi";
+import {
+  PieChart as RPieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+
+// Small helper for nicer cards
+const Stat = ({
+  icon,
+  label,
+  value,
+  subLabel,
+  badge,
+  color = "primary",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  subLabel?: string;
+  badge?: string;
+  color?: "primary" | "success" | "electric";
+}) => (
+  <Card className="relative border-0 shadow-soft bg-gradient-to-br from-background to-muted/30 hover:shadow-lg transition-shadow">
+    <CardContent className="p-5">
+      <div className="flex items-start justify-between mb-3">
+        <div className={`p-2 rounded-xl bg-${color}/10`}>{icon}</div>
+        {badge && <Badge className="text-xs">{badge}</Badge>}
+      </div>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="text-3xl font-bold tracking-tight">{value}</p>
+      {subLabel && (
+        <p className="text-xs text-muted-foreground mt-1">{subLabel}</p>
+      )}
+    </CardContent>
+  </Card>
+);
+
+const COLORS_HEX: Record<string, string> = {
+  primary: "#2563eb", // tailwind blue-600
+  success: "#16a34a", // green-600
+  success70: "#22c55e",
+  warning: "#ca8a04", // yellow-600
+  destructive: "#dc2626", // red-600
+  muted: "#6b7280", // gray-500
+  electric: "#0ea5e9", // sky-500
+  pending: "#a855f7", // violet-600
+};
 
 const AdminOverview = () => {
-  const overviewStats = [
-    {
-      title: "Tổng khách hàng",
-      value: "2,847",
-      change: "+12%",
-      changeType: "increase",
-      icon: Users,
-      color: "bg-primary",
-    },
-    {
-      title: "Xe đang bảo dưỡng",
-      value: "157",
-      change: "-5%",
-      changeType: "decrease",
-      icon: Car,
-      color: "bg-warning",
-    },
-    {
-      title: "Lịch hẹn hôm nay",
-      value: "34",
-      change: "-3%",
-      changeType: "decrease",
-      icon: Calendar,
-      color: "bg-electric",
-    },
-    {
-      title: "Doanh thu tháng",
-      value: "đ847.2M",
-      change: "+18%",
-      changeType: "increase",
-      icon: DollarSign,
-      color: "bg-success",
-    },
-  ];
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<Awaited<
+    ReturnType<typeof fetchDashboardOverview>
+  > | null>(null);
 
-  const recentAppointments = [
-    {
-      id: 1,
-      time: "09:00",
-      customer: "Nguyễn Văn A",
-      vehicle: "Tesla Model 3 - 59A-123.45",
-      service: "Bảo dưỡng định kỳ",
-      technician: "Trần Văn B",
-      status: "Đang thực hiện",
-    },
-    {
-      id: 2,
-      time: "10:30",
-      customer: "Lê Thị C",
-      vehicle: "VinFast VF8 - 30G-789.12",
-      service: "Thay pin xe",
-      technician: "Nguyễn Văn D",
-      status: "Chờ xử lý",
-    },
-  ];
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setError(null);
+    fetchDashboardOverview()
+      .then((res) => {
+        if (mounted) setData(res);
+      })
+      .catch((e) => {
+        if (mounted) setError(e?.message || "Lỗi tải dữ liệu");
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-  const topTechnicians = [
-    {
-      id: 1,
-      name: "Trần Văn B",
-      completedTasks: 23,
-      rating: 4.8,
-      efficiency: "95%",
-    },
-    {
-      id: 2,
-      name: "Nguyễn Văn D",
-      completedTasks: 19,
-      rating: 4.6,
-      efficiency: "88%",
-    },
-    {
-      id: 3,
-      name: "Võ Thị F",
-      completedTasks: 21,
-      rating: 4.9,
-      efficiency: "92%",
-    },
-  ];
+  const paymentItems = useMemo(() => {
+    const b = data?.data.payment.breakdown;
+    return [
+      {
+        key: "paid",
+        label: "Đã thanh toán",
+        color: "success",
+        value: b?.paid || 0,
+      },
+      {
+        key: "pending",
+        label: "Chờ thanh toán",
+        color: "warning",
+        value: b?.pending || 0,
+      },
+      {
+        key: "cancelled",
+        label: "Đã hủy",
+        color: "destructive",
+        value: b?.cancelled || 0,
+      },
+    ];
+  }, [data]);
+
+  const appointmentItems = useMemo(() => {
+    const b = data?.data.appointment.breakdown;
+    return [
+      {
+        key: "completed",
+        label: "Hoàn thành",
+        color: "success",
+        value: b?.completed || 0,
+      },
+      {
+        key: "in_progress",
+        label: "Đang thực hiện",
+        color: "electric",
+        value: b?.in_progress || 0,
+      },
+      {
+        key: "assigned",
+        label: "Đã phân công",
+        color: "primary",
+        value: b?.assigned || 0,
+      },
+      {
+        key: "accepted",
+        label: "Đã xác nhận",
+        color: "muted",
+        value: b?.accepted || 0,
+      },
+      {
+        key: "pending",
+        label: "Chờ xử lý",
+        color: "warning",
+        value: b?.pending || 0,
+      },
+      {
+        key: "deposited",
+        label: "Đã đặt cọc",
+        color: "pending",
+        value: b?.deposited || 0,
+      },
+      {
+        key: "paid",
+        label: "Đã thanh toán",
+        color: "success70",
+        value: b?.paid || 0,
+      },
+      {
+        key: "canceled",
+        label: "Đã hủy",
+        color: "destructive",
+        value: b?.canceled || 0,
+      },
+    ];
+  }, [data]);
+
+  const paymentPieData = paymentItems
+    .filter((x) => x.value > 0)
+    .map((x) => ({
+      name: x.label,
+      value: x.value,
+      color: COLORS_HEX[x.color],
+    }));
+
+  const appointmentPieData = appointmentItems
+    .filter((x) => x.value > 0)
+    .map((x) => ({
+      name: x.label,
+      value: x.value,
+      color: COLORS_HEX[x.color],
+    }));
+
+  const paymentRate = data?.data.payment.rate || 0;
 
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Tổng quan hệ thống</h2>
+        <h2 className="text-2xl font-extrabold tracking-tight mb-2">
+          Tổng quan hệ thống
+        </h2>
         <p className="text-muted-foreground">
           Theo dõi hoạt động trung tâm dịch vụ EV
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        {overviewStats.map((stat) => (
-          <Card
-            key={stat.title}
-            className="bg-gradient-card border-0 shadow-soft">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className={`p-2 rounded-lg ${stat.color}/10`}>
-                  <stat.icon
-                    className={`h-5 w-5 ${stat.color.replace("bg-", "text-")}`}
-                  />
-                </div>
-                <Badge
-                  variant={
-                    stat.changeType === "increase" ? "default" : "destructive"
-                  }
-                  className="text-xs">
-                  {stat.change} từ tháng trước
-                </Badge>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{stat.title}</p>
-                <p className="text-2xl font-bold">{stat.value}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Đang tải dữ liệu...
+        </div>
+      ) : error ? (
+        <div className="text-destructive">{error}</div>
+      ) : (
+        <>
+          {/* Top stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <Stat
+              icon={<DollarSign className="h-5 w-5 text-success" />}
+              label="Doanh thu"
+              value={formatCurrencyVND(data!.data.revenue)}
+              badge="Tổng doanh thu"
+              color="success"
+            />
+            <Stat
+              icon={<PieIcon className="h-5 w-5 text-primary" />}
+              label="Thanh toán"
+              value={data!.data.payment.total}
+              subLabel={`Tỉ lệ thành công: ${formatPercent(paymentRate)}`}
+              badge="Tổng đơn thanh toán"
+              color="primary"
+            />
+            <Stat
+              icon={<Calendar className="h-5 w-5 text-electric" />}
+              label="Lịch hẹn"
+              value={data!.data.appointment.total}
+              badge="Tổng lịch hẹn"
+              color="electric"
+            />
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-gradient-card border-0 shadow-soft">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Lịch hẹn gần đây
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentAppointments.map((appointment) => (
-                <div
-                  key={appointment.id}
-                  className="flex items-center gap-4 p-4 border rounded-lg bg-background/50">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
-                      <Clock className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium">
-                          {appointment.time}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {appointment.customer}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {appointment.vehicle}
-                      </p>
-                      <p className="text-sm">{appointment.service}</p>
-                      <p className="text-xs text-muted-foreground">
-                        KTV: {appointment.technician}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge
-                    className={
-                      appointment.status === "Đang thực hiện"
-                        ? "bg-warning text-white"
-                        : "bg-pending text-white"
-                    }>
-                    {appointment.status}
-                  </Badge>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                  </div>
+          {/* Charts + breakdowns */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* Appointment status */}
+            <Card className="border-0 shadow-soft bg-gradient-to-br from-background to-muted/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2">
+                  <PieIcon className="h-5 w-5" /> Trạng thái lịch hẹn
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-center">
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RPieChart>
+                      <Pie
+                        dataKey="value"
+                        data={appointmentPieData}
+                        outerRadius={100}
+                        innerRadius={60}
+                        paddingAngle={3}
+                      >
+                        {appointmentPieData.map((entry, index) => (
+                          <Cell key={`cell-a-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => v.toLocaleString()} />
+                      <Legend />
+                    </RPieChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-            </div>
-            <Button variant="outline" className="w-full mt-4">
-              Xem tất cả lịch hẹn
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-card border-0 shadow-soft">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Hiệu suất kỹ thuật viên
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {topTechnicians.map((tech) => (
-                <div
-                  key={tech.id}
-                  className="flex items-center gap-4 p-4 border rounded-lg bg-background/50">
-                  <div className="flex items-center gap-3 flex-1">
+                <div className="space-y-3">
+                  {appointmentItems.map((it) => (
                     <div
-                      className={`w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium flex-shrink-0`}>
-                      {tech.name.charAt(0)}
+                      key={it.key}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-block w-2 h-2 rounded bg-[${
+                            COLORS_HEX[it.color]
+                          }]`}
+                          style={{ backgroundColor: COLORS_HEX[it.color] }}
+                        />
+                        <span className="text-sm">{it.label}</span>
+                      </div>
+                      <span className="text-sm font-medium">{it.value}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium">{tech.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {tech.completedTasks} công việc hoàn thành
-                      </p>
-                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Payment status */}
+            <Card className="border-0 shadow-soft bg-gradient-to-br from-background to-muted/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2">
+                  <PieIcon className="h-5 w-5" /> Trạng thái thanh toán
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-center">
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RPieChart>
+                      <Pie
+                        dataKey="value"
+                        data={paymentPieData}
+                        outerRadius={100}
+                        innerRadius={60}
+                        paddingAngle={3}
+                      >
+                        {paymentPieData.map((entry, index) => (
+                          <Cell key={`cell-p-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => v.toLocaleString()} />
+                      <Legend />
+                    </RPieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div>
+                  <div className="space-y-3">
+                    {paymentItems.map((it) => (
+                      <div
+                        key={it.key}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="inline-block w-2 h-2 rounded"
+                            style={{ backgroundColor: COLORS_HEX[it.color] }}
+                          />
+                          <span className="text-sm">{it.label}</span>
+                        </div>
+                        <span className="text-sm font-medium">{it.value}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="text-right">
-                    <div className="flex items-center gap-1 mb-1">
-                      <span className="text-sm font-medium">⭐</span>
-                      <span className="text-sm font-medium">{tech.rating}</span>
+
+                  {/* Success rate bar */}
+                  <div className="mt-5">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Tỉ lệ thanh toán thành công: {formatPercent(paymentRate)}
+                    </p>
+                    <div className="w-full h-2 rounded-full bg-muted/40 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-success transition-all"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.max(0, paymentRate * 100)
+                          )}%`,
+                        }}
+                      />
                     </div>
-                    <Badge className="bg-success text-white text-xs">
-                      {tech.efficiency}
-                    </Badge>
                   </div>
                 </div>
-              ))}
-            </div>
-            <Button variant="outline" className="w-full mt-4">
-              Xem báo cáo chi tiết
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </>
   );
 };

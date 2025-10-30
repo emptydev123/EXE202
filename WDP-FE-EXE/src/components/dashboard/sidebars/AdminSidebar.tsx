@@ -34,12 +34,24 @@ const adminMenuItems = [
     href: "/dashboard/admin/services",
   },
   { title: "Quản lý khách hàng", icon: Users },
-  { title: "Quản lý phương tiện", icon: Car, href: "/dashboard/admin/vehicle-models" },
+  {
+    title: "Quản lý phương tiện",
+    icon: Car,
+    href: "/dashboard/admin/vehicle-models",
+  },
   { title: "Quản lý lịch hẹn", icon: FileText },
   { title: "Quản lý kỹ thuật viên", icon: Users },
-  { title: "Quản lý phụ tùng", icon: Settings },
-  { title: "Báo cáo & Thống kê", icon: BarChart3 },
-  { title: "Quản lý tài chính", icon: DollarSign },
+  { title: "Quản lý phụ tùng", icon: Settings, href: "/dashboard/admin/parts" },
+  {
+    title: "Báo cáo & Thống kê",
+    icon: BarChart3,
+    href: "/dashboard/admin/reports",
+  },
+  {
+    title: "Quản lý tài chính",
+    icon: DollarSign,
+    href: "/dashboard/admin/finance",
+  },
 ];
 
 export function AdminSidebar() {
@@ -74,7 +86,8 @@ export function AdminSidebar() {
                               ? "bg-primary text-primary-foreground"
                               : "hover:bg-accent"
                           }`
-                        }>
+                        }
+                      >
                         <item.icon className="h-4 w-4" />
                         <span className="text-sm">{item.title}</span>
                       </NavLink>
